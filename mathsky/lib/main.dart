@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 void main() {
   runApp(MyMathSolverApp());
@@ -27,25 +28,20 @@ class MathHomePage extends StatefulWidget {
 class _MathHomePageState extends State<MathHomePage> {
   final TextEditingController _controller = TextEditingController();
   String _solution = '';
+  List<String> _steps = [];
   String _errorMessage = '';
   bool _isLoading = false;
 
-  // OCR Functionality
-  String _recognizedText = '';
-
-  Future<void> _pickAndRecognizeText() async {
+  Future<void> _pickAndRecognizeText(ImageSource source) async {
     try {
-      final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      final pickedFile = await ImagePicker().pickImage(source: source);
       if (pickedFile != null) {
         final inputImage = InputImage.fromFilePath(pickedFile.path);
         final textRecognizer = TextRecognizer();
-        final RecognizedText recognizedText =
-            await textRecognizer.processImage(inputImage);
+        final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
 
         setState(() {
-          _recognizedText = recognizedText.text;
-          _controller.text = _recognizedText; // Remplit le champ avec l’OCR
+          _controller.text = recognizedText.text;
         });
       }
     } catch (e) {
@@ -60,20 +56,20 @@ class _MathHomePageState extends State<MathHomePage> {
       _isLoading = true;
       _errorMessage = '';
       _solution = '';
+      _steps = [];
     });
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.200:5000/solve'), // Remplace par ton IP locale
+        Uri.parse('http://192.168.1.200:5000/solve'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'problem': _controller.text}),
       );
 
-      print('DEBUG: HTTP Response Code: ${response.statusCode}');
-      print('DEBUG: HTTP Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         setState(() {
-          _solution = json.decode(response.body)['solution'];
+          _solution = data['solution'] ?? '';
+          _steps = List<String>.from(data['steps'] ?? []);
         });
       } else {
         setState(() {
@@ -105,12 +101,25 @@ class _MathHomePageState extends State<MathHomePage> {
               decoration: InputDecoration(
                 labelText: 'Écris ton problème mathématique',
                 border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.camera_alt),
-                  onPressed: _pickAndRecognizeText,
-                ),
               ),
               maxLines: null,
+            ),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _pickAndRecognizeText(ImageSource.camera),
+                  icon: Icon(Icons.camera_alt),
+                  label: Text('Scanner'),
+                ),
+                SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _pickAndRecognizeText(ImageSource.gallery),
+                  icon: Icon(Icons.photo_library),
+                  label: Text('Télécharger'),
+                ),
+              ],
             ),
             SizedBox(height: 16),
             ElevatedButton.icon(
@@ -135,6 +144,7 @@ class _MathHomePageState extends State<MathHomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Solution :',
@@ -143,6 +153,19 @@ class _MathHomePageState extends State<MathHomePage> {
                       ),
                       SizedBox(height: 8),
                       Text(_solution),
+                      if (_steps.isNotEmpty) ...[
+                        SizedBox(height: 16),
+                        Text(
+                          'Explications :',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        SizedBox(height: 8),
+                        ..._steps.map((step) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Text('- $step'),
+                            )),
+                      ],
                     ],
                   ),
                 ),

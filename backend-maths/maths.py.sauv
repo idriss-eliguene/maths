@@ -1,0 +1,47 @@
+from flask import Flask, request, jsonify
+from sympy import symbols, Eq, solve, simplify
+import re
+
+app = Flask(__name__)
+
+def add_multiplication_operators(expression):
+    return re.sub(r'(\d)([a-zA-Z])', r'\1*\2', expression)
+
+@app.route('/solve', methods=['POST'])
+def solve_problem():
+    try:
+        data = request.get_json(force=True)
+        problem = data.get('problem', '')
+
+        if ':' in problem:
+            problem = problem.split(':', 1)[-1].strip()
+
+        problem = add_multiplication_operators(problem)
+
+        x = symbols('x')
+        steps = []
+
+        if '=' in problem:
+            left, right = problem.split('=')
+            steps.append(f"On commence par l'équation : {left.strip()} = {right.strip()}")
+
+            # Déplace tout à gauche
+            expr = simplify(f"({left.strip()}) - ({right.strip()})")
+            steps.append(f"Soustraction des deux côtés : {expr} = 0")
+
+            # Résolution
+            solution = solve(Eq(simplify(left.strip()), simplify(right.strip())), x)
+            steps.append(f"On trouve la solution : x = {solution}")
+
+        else:
+            solution = simplify(problem)
+            steps.append(f"Résultat simplifié : {solution}")
+
+        return jsonify({'solution': str(solution), 'steps': steps})
+
+    except Exception as e:
+        return jsonify({'solution': f'Error: {str(e)}'}), 400
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
