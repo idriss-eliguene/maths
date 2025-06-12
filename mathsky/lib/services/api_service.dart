@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 /// ⚠️  Change HOST if you test on a real device or iOS sim.
 /// On Android emulator '10.0.2.2' pointe vers localhost de l’hôte.
-const String _baseUrl = 'http://192.168.1.200:5000';
+const String _baseUrl = 'http://51.75.117.209:5000';
 
 Future<Map<String, dynamic>> solveProblem(String problem) async {
   final res = await http.post(

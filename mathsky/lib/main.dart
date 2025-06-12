@@ -1,7 +1,5 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-
-// N’oublie pas d’avoir ces deux fichiers dans lib/pages/
 import 'pages/solve_page.dart';
 import 'pages/study_page.dart';
 
@@ -17,7 +15,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   int _index = 0;
 
-  // Chaque élément est un widget instancié (et const si possible)
+
   final List<Widget> _pages = const [
     SolvePage(),
     StudyPage(),
