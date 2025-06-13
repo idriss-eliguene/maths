@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/variation_table.dart';
 import '../widgets/function_plot.dart';
+import '../widgets/image_scan_button.dart';
+import '../utils/ocr_utils.dart';
 
 class StudyPage extends StatefulWidget {
   const StudyPage({super.key});
@@ -18,7 +20,6 @@ class _StudyPageState extends State<StudyPage> {
   String? _error;
   Map<String, dynamic>? _data;
 
-  /* ---------------------- réseau ---------------------- */
   Future<void> _run() async {
     setState(() {
       _loading = true;
@@ -33,17 +34,12 @@ class _StudyPageState extends State<StudyPage> {
     setState(() => _loading = false);
   }
 
-  /* --------------------- affichage -------------------- */
   Widget _buildResult() {
     if (_data == null) return const SizedBox.shrink();
     final d = _data!;
 
-    // Si le modèle n’a pas renvoyé un JSON structuré
-    if (d.containsKey('raw')) {
-      return SelectableText(d['raw'] as String);
-    }
+    if (d.containsKey('raw')) return SelectableText(d['raw'] as String);
 
-    // Listes protégées contre null
     final crit    = (d['critical_points']  as List?) ?? const [];
     final limites = (d['limites']          as List?) ?? const [];
     final varTab  = (d['variation_table']  as List?) ?? const [];
@@ -52,20 +48,15 @@ class _StudyPageState extends State<StudyPage> {
 
     return ListView(
       children: [
-        /* --------- champs principaux ------------------ */
         Text('Domaine : ${d['domaine'] ?? '—'}'),
         Text('Dérivée : ${d['derivative'] ?? '—'}'),
         Text('Points critiques : ${crit.join(', ')}'),
         const SizedBox(height: 12),
 
-        /* --------- Limites ---------------------------- */
-        Text('Limites :',
-            style: Theme.of(context).textTheme.titleSmall),
-        ...limites.map((l) =>
-            Text(' • x→${l['x']}   f(x)→ ${l['val']}')),
+        Text('Limites :', style: Theme.of(context).textTheme.titleSmall),
+        ...limites.map((l) => Text(' • x→${l['x']}   f(x)→ ${l['val']}')),
         const SizedBox(height: 12),
 
-        /* --------- Tableau de variations -------------- */
         Text('Tableau de variations :',
             style: Theme.of(context).textTheme.titleSmall),
         varTab.isNotEmpty
@@ -73,22 +64,14 @@ class _StudyPageState extends State<StudyPage> {
             : const Text(' —'),
         const SizedBox(height: 12),
 
-        /* --------- Tracé de la courbe ----------------- */
         Text('Courbe :', style: Theme.of(context).textTheme.titleSmall),
-        SizedBox(
-          height: 250,
-          child: FunctionPlot(expression: _ctrl.text),
-        ),
+        SizedBox(height: 250, child: FunctionPlot(expression: _ctrl.text)),
         const SizedBox(height: 12),
 
-        /* --------- Concavité -------------------------- */
-        Text('Concavité :',
-            style: Theme.of(context).textTheme.titleSmall),
-        ...concav.map((c) =>
-            Text(' • ${c['interval']} : ${c['type']}')),
+        Text('Concavité :', style: Theme.of(context).textTheme.titleSmall),
+        ...concav.map((c) => Text(' • ${c['interval']} : ${c['type']}')),
         const SizedBox(height: 12),
 
-        /* --------- Asymptotes ------------------------- */
         Text('Asymptotes : ${asympt.join(', ')}'),
         const Divider(),
         Text(d['commentaire'] ?? ''),
@@ -96,7 +79,6 @@ class _StudyPageState extends State<StudyPage> {
     );
   }
 
-  /* -------------------- build ------------------------ */
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.all(16),
@@ -109,12 +91,34 @@ class _StudyPageState extends State<StudyPage> {
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ImageScanButton(
+                  icon: Icons.camera_alt,
+                  label: 'Caméra',
+                  onTextRecognized: (text) {
+                    final expression = extractMathExpression(text);
+                    _ctrl.text = expression;
+                  },
+                ),
+                const SizedBox(width: 16),
+                ImageScanButton(
+                  icon: Icons.photo,
+                  label: 'Galerie',
+                  onTextRecognized: (text) {
+                    final expression = extractMathExpression(text);
+                    _ctrl.text = expression;
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _loading ? null : _run,
               child: _loading
-                  ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator())
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator())
                   : const Text('Étudier'),
             ),
             const SizedBox(height: 24),

@@ -1,12 +1,7 @@
-// pubspec.yaml additions:
-// dependencies:
-//   image_picker: ^1.0.4
-//   google_ml_kit: ^0.16.2
-
-// lib/widgets/image_scan_button.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import '../utils/text_cleaner.dart';
 
 class ImageScanButton extends StatelessWidget {
   final void Function(String) onTextRecognized;
@@ -20,7 +15,7 @@ class ImageScanButton extends StatelessWidget {
     required this.label,
   });
 
-  Future<void> _pickAndScanImage(ImageSource source) async {
+  Future<void> _pickAndScanImage(ImageSource source, BuildContext context) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: source);
     if (image == null) return;
@@ -30,7 +25,16 @@ class ImageScanButton extends StatelessWidget {
     final recognizedText = await recognizer.processImage(inputImage);
     await recognizer.close();
 
-    onTextRecognized(recognizedText.text);
+    final expression = cleanOCRText(recognizedText.text);
+
+    if (!isLikelyMathExpression(expression)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aucune expression mathématique détectée.")),
+      );
+      return;
+    }
+
+    onTextRecognized(expression);
   }
 
   @override
@@ -40,7 +44,7 @@ class ImageScanButton extends StatelessWidget {
         IconButton(
           icon: Icon(icon),
           tooltip: label,
-          onPressed: () => _pickAndScanImage(ImageSource.gallery),
+          onPressed: () => _pickAndScanImage(ImageSource.gallery, context),
         ),
       ],
     );

@@ -1,7 +1,11 @@
+// lib/pages/solve_page.dart
 import 'package:flutter/material.dart';
-import 'package:math_expressions/math_expressions.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:math_expressions/math_expressions.dart';
+
 import '../services/api_service.dart';
+import '../widgets/image_scan_button.dart';
+import '../utils/ocr_utils.dart';
 
 class SolvePage extends StatefulWidget {
   const SolvePage({super.key});
@@ -25,7 +29,6 @@ class _SolvePageState extends State<SolvePage> {
   Map<String, dynamic> _evaluateWithSteps(String input) {
     final parser = Parser();
     final context = ContextModel();
-
     Expression expr = parser.parse(input);
     List<String> steps = [expr.toString()];
 
@@ -38,7 +41,6 @@ class _SolvePageState extends State<SolvePage> {
 
     final num value = expr.evaluate(EvaluationType.REAL, context);
     final result = value % 1 == 0 ? value.toInt().toString() : value.toString();
-
     steps.add(result);
     return {'result': result, 'steps': steps};
   }
@@ -87,6 +89,29 @@ class _SolvePageState extends State<SolvePage> {
               ),
               minLines: 1,
               maxLines: 3,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ImageScanButton(
+                  icon: Icons.camera_alt,
+                  label: 'Caméra',
+                  onTextRecognized: (text) {
+                    final expression = extractMathExpression(text);
+                    _ctrl.text = expression;
+                  },
+                ),
+                const SizedBox(width: 16),
+                ImageScanButton(
+                  icon: Icons.photo,
+                  label: 'Galerie',
+                  onTextRecognized: (text) {
+                    final expression = extractMathExpression(text);
+                    _ctrl.text = expression;
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ElevatedButton(

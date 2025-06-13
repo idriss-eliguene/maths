@@ -27,9 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Cette application a besoin d'accéder à votre caméra pour prendre une photo du problème mathématique.</string>
+	<string>Nous avons besoin d'accéder à la caméra pour scanner les expressions mathématiques.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cette application a besoin d'accéder à votre bibliothèque de photos pour sélectionner une image.</string>
+	<string>Nous avons besoin d'accéder à vos photos pour lire les problèmes mathématiques.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -37,11 +37,6 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
-	<key>NSCameraUsageDescription</key>
-	<string>Nous avons besoin d'accéder à la caméra pour scanner les expressions mathématiques.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Nous avons besoin d'accéder à vos photos pour lire les problèmes mathématiques.</string>
-
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
