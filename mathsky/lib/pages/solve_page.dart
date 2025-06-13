@@ -1,7 +1,7 @@
-// lib/pages/solve_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:math_expressions/math_expressions.dart';
+import 'dart:async';
 
 import '../services/api_service.dart';
 import '../widgets/image_scan_button.dart';
@@ -15,7 +15,7 @@ class SolvePage extends StatefulWidget {
 }
 
 class _SolvePageState extends State<SolvePage> {
-  final _ctrl = TextEditingController();
+  final TextEditingController _ctrl = TextEditingController();
   bool _loading = false;
   String? _error;
   String? _solution;
@@ -77,80 +77,115 @@ class _SolvePageState extends State<SolvePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _ctrl,
-              decoration: const InputDecoration(
-                labelText: 'Énoncé ou expression numérique',
-                border: OutlineInputBorder(),
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          TextField(
+            controller: _ctrl,
+            decoration: const InputDecoration(
+              labelText: 'Énoncé ou expression numérique',
+              border: OutlineInputBorder(),
+            ),
+            minLines: 1,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.photo_camera),
+                tooltip: "Scanner depuis la caméra",
+                onPressed: () async {
+                  final text = await _scanFromCamera();
+                  _ctrl.text = text;
+                },
               ),
-              minLines: 1,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ImageScanButton(
-                  icon: Icons.camera_alt,
-                  label: 'Caméra',
-                  onTextRecognized: (text) {
-                    final expression = extractMathExpression(text);
-                    _ctrl.text = expression;
-                  },
-                ),
-                const SizedBox(width: 16),
-                ImageScanButton(
-                  icon: Icons.photo,
-                  label: 'Galerie',
-                  onTextRecognized: (text) {
-                    final expression = extractMathExpression(text);
-                    _ctrl.text = expression;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _loading ? null : _run,
-              child: _loading
-                  ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator())
-                  : const Text('Résoudre'),
-            ),
-            const SizedBox(height: 24),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            if (_solution != null) ...[
-              Text('Solution :',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              SelectableText(_solution!),
-              const Divider(),
-              if (_steps.isNotEmpty)
-                Text('Étapes :',
-                    style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView(
-                  children: _steps.map((s) {
-                    final trimmed = s.trim();
-                    final isLatex = trimmed.startsWith(r'\[') && trimmed.endsWith(r'\]');
-                    final clean = trimmed.replaceAll(r'\[', '').replaceAll(r'\]', '');
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6.0),
-                      child: isLatex
-                          ? Math.tex(clean, textStyle: const TextStyle(fontSize: 16))
-                          : Text(trimmed, style: const TextStyle(fontSize: 16)),
-                    );
-                  }).toList(),
-                ),
+              const SizedBox(width: 16),
+              IconButton(
+                icon: const Icon(Icons.photo_library),
+                tooltip: "Scanner depuis la galerie",
+                onPressed: () async {
+                  final text = await _scanFromGallery();
+                  _ctrl.text = text;
+                },
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _loading ? null : _run,
+            child: _loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator())
+                : const Text('Résoudre'),
+          ),
+          const SizedBox(height: 24),
+          if (_error != null)
+            Text(_error!, style: const TextStyle(color: Colors.red)),
+          if (_solution != null) ...[
+            Text('Solution :', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SelectableText(_solution!),
+            const Divider(),
+            if (_steps.isNotEmpty)
+              Text('Étapes :', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: _steps.map((s) {
+                  final trimmed = s.trim();
+                  final isLatex = trimmed.startsWith(r'\[') && trimmed.endsWith(r'\]');
+                  final clean = trimmed.replaceAll(r'\[', '').replaceAll(r'\]', '');
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: isLatex
+                        ? Math.tex(clean, textStyle: const TextStyle(fontSize: 16))
+                        : Text(trimmed, style: const TextStyle(fontSize: 16)),
+                  );
+                }).toList(),
+              ),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Future<String> _scanFromGallery() async {
+    final completer = Completer<String>();
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Scanner depuis la galerie"),
+        content: ImageScanButton(
+          onTextScanned: (text) {
+            final expression = extractMathExpression(text);
+            completer.complete(expression);
+            Navigator.of(context).pop();
+          },
         ),
-      );
+      ),
+    );
+    return completer.future;
+  }
+
+  Future<String> _scanFromCamera() async {
+    final completer = Completer<String>();
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Scanner depuis la caméra"),
+        content: ImageScanButton(
+          onTextScanned: (text) {
+            final expression = extractMathExpression(text);
+            completer.complete(expression);
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+    return completer.future;
+  }
 }

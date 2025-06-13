@@ -1,10 +1,9 @@
-// lib/pages/study_page.dart
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/variation_table.dart';
 import '../widgets/function_plot.dart';
 import '../widgets/image_scan_button.dart';
-import '../utils/ocr_utils.dart';
+import 'dart:async';
 
 class StudyPage extends StatefulWidget {
   const StudyPage({super.key});
@@ -26,12 +25,15 @@ class _StudyPageState extends State<StudyPage> {
       _error = null;
       _data = null;
     });
+
     try {
-      _data = await studyFunction(_ctrl.text);
+      final result = await studyFunction(_ctrl.text);
+      setState(() => _data = result);
     } catch (e) {
-      _error = e.toString();
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _loading = false);
     }
-    setState(() => _loading = false);
   }
 
   Widget _buildResult() {
@@ -57,8 +59,7 @@ class _StudyPageState extends State<StudyPage> {
         ...limites.map((l) => Text(' • x→${l['x']}   f(x)→ ${l['val']}')),
         const SizedBox(height: 12),
 
-        Text('Tableau de variations :',
-            style: Theme.of(context).textTheme.titleSmall),
+        Text('Tableau de variations :', style: Theme.of(context).textTheme.titleSmall),
         varTab.isNotEmpty
             ? VariationTable(rows: List<Map<String, dynamic>>.from(varTab))
             : const Text(' —'),
@@ -84,35 +85,44 @@ class _StudyPageState extends State<StudyPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: "Scanner une image",
+                  icon: const Icon(Icons.image_search),
+                  onPressed: () async {
+                    final expression = await showDialog<String>(
+                      context: context,
+                      builder: (context) {
+                        final completer = Completer<String>();
+                        return AlertDialog(
+                          title: const Text('Scan d\'image'),
+                          content: ImageScanButton(
+                            onTextScanned: (text) {
+                              completer.complete(text);
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        );
+                      },
+                    );
+
+                    if (expression != null && expression.isNotEmpty) {
+                      setState(() => _ctrl.text = expression);
+                      _run();
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _ctrl,
               decoration: const InputDecoration(
                 labelText: 'f(x) =',
                 border: OutlineInputBorder(),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ImageScanButton(
-                  icon: Icons.camera_alt,
-                  label: 'Caméra',
-                  onTextRecognized: (text) {
-                    final expression = extractMathExpression(text);
-                    _ctrl.text = expression;
-                  },
-                ),
-                const SizedBox(width: 16),
-                ImageScanButton(
-                  icon: Icons.photo,
-                  label: 'Galerie',
-                  onTextRecognized: (text) {
-                    final expression = extractMathExpression(text);
-                    _ctrl.text = expression;
-                  },
-                ),
-              ],
             ),
             const SizedBox(height: 12),
             ElevatedButton(
